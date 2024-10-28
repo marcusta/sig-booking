@@ -10,6 +10,13 @@ const routes = new Elysia()
     message: "Welcome to the SIG Matchi webhook server!",
   }))
 
+  .get("*", ({ set }) => {
+    set.status = 404;
+    return {
+      message: "Not found, from matchi_routes.ts",
+    };
+  })
+
   .post("/hook", ({ headers, body, set }) => {
     // read header x-matchi-signature from request
     const signature = headers["x-matchi-signature"] as string;
