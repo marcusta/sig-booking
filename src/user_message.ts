@@ -1,7 +1,8 @@
-import { getExactHourFromNow, isNearNewHour, toDateString } from "date";
+import { getExactHourFromNow, isNearNewHour, toDateStringUTC } from "date";
 import { db } from "db/db";
 import { bookings, type Booking } from "db/schema";
 import { and, eq, sql } from "drizzle-orm";
+import logger from "logger";
 
 export interface UserMessage {
   type: "start" | "end-free" | "end-occupied";
@@ -25,18 +26,31 @@ async function setHasShownEndMessage(bookingId: string) {
 export async function showUserMessageForCourt(
   courtId: string
 ): Promise<UserMessage | null> {
-  const currentBooking = await getCurrentBooking(courtId);
-  const nextBooking = await getNextBooking(courtId);
+  let currentBooking: Booking | null = null;
+  let nextBooking: Booking | null = null;
+  try {
+    currentBooking = await getCurrentBooking(courtId);
+    nextBooking = await getNextBooking(courtId);
+    logger.debug(
+      "showUserMessageForCourt" +
+        JSON.stringify({ currentBooking, nextBooking })
+    );
+  } catch (error) {
+    logger.error("Error showing user message: ", error);
+    console.log("Error showing user message: ", error);
+    return null;
+  }
+
   const { isJustBefore } = isNearNewHour();
 
   if (!currentBooking && !nextBooking) {
-    // console.log("No bookings for court");
+    logger.info("showUserMessageForCourt: No bookings for court");
     return null;
   }
 
   if (currentBooking && !currentBooking.hasShownStartMessage) {
     const previousBooking = await getPreviousBooking(courtId);
-    // console.log("previousBooking", previousBooking);
+    logger.debug("previousBooking", previousBooking);
     if (
       previousBooking &&
       previousBooking.customerId === currentBooking.customerId
@@ -109,9 +123,12 @@ async function getActiveBookingsForCourt(
   endTimeDate: Date,
   limit?: number
 ): Promise<Booking[]> {
-  const startTime = toDateString(startTimeDate);
-  const endTime = toDateString(endTimeDate);
-
+  const startTime = toDateStringUTC(startTimeDate);
+  const endTime = toDateStringUTC(endTimeDate);
+  logger.info(
+    "getActiveBookingsForCourt: " +
+      JSON.stringify({ courtId, startTime, endTime, limit })
+  );
   try {
     let query = db
       .select()
@@ -141,9 +158,15 @@ async function getActiveBookingsForCourt(
 export async function getNextBooking(courtId: string): Promise<Booking | null> {
   const nextHour = getExactHourFromNow(1);
   const twoHoursLater = getExactHourFromNow(2);
-  return first(
-    await getActiveBookingsForCourt(courtId, nextHour, twoHoursLater)
+  logger.info(
+    "getNextBooking: " + JSON.stringify({ courtId, nextHour, twoHoursLater })
   );
+  const activeBookings = await getActiveBookingsForCourt(
+    courtId,
+    nextHour,
+    twoHoursLater
+  );
+  return first(activeBookings);
 }
 
 export async function getPreviousBooking(

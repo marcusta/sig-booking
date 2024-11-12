@@ -2,28 +2,38 @@ import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 
 // Create a Winston logger configuration
-const logger = winston.createLogger({
-  level: "info",
+const consoleTransport = new winston.transports.Console({
   format: winston.format.combine(
+    winston.format.errors({ stack: true, cause: true }),
+    winston.format.colorize(),
     winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message }) => {
-      return `${timestamp} [${level.toUpperCase()}]: ${message}`;
+    winston.format.printf(({ timestamp, level, message, ...metadata }) => {
+      let msg = `${timestamp} [${level}]: ${message}`;
+      if (Object.keys(metadata).length > 0) {
+        msg += ` ${JSON.stringify(metadata)}`;
+      }
+      return msg;
     })
   ),
-  transports: [
-    // Console transport
-    new winston.transports.Console(),
+});
 
-    // File transport with daily rotation
-    new DailyRotateFile({
-      dirname: "./logs",
-      filename: "application-%DATE%.log",
-      datePattern: "YYYY-MM-DD",
-      maxSize: "20m", // Maximum file size
-      maxFiles: "14d", // Keep logs for 14 days
-      zippedArchive: true, // Compress old logs
-    }),
-  ],
+const fileTransport = new DailyRotateFile({
+  dirname: "./logs",
+  filename: "application-%DATE%.log",
+  datePattern: "YYYY-MM-DD",
+  maxSize: "20m",
+  maxFiles: "14d",
+  zippedArchive: true,
+  format: winston.format.combine(
+    winston.format.errors({ stack: true, cause: true }),
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+});
+
+const logger = winston.createLogger({
+  level: "debug",
+  transports: [consoleTransport, fileTransport],
 });
 
 // Export the logger

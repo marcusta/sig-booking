@@ -3,6 +3,7 @@ import type { MatchiWebhookJson } from "matchi_types";
 import { showUserMessageForCourt } from "user_message";
 import { handleWebhook } from "webhook_handlers";
 import { addTextToImage } from "./image/image-generator";
+import logger from "./logger";
 
 const routes = new Elysia()
   // Home route
@@ -20,6 +21,7 @@ const routes = new Elysia()
   .post("/hook", ({ headers, body, set }) => {
     // read header x-matchi-signature from request
     const signature = headers["x-matchi-signature"] as string;
+    logger.info("matchi_routes.ts hook hello", { signature });
     if (!signature) {
       set.status = 400;
       return;
@@ -32,7 +34,7 @@ const routes = new Elysia()
       if (e.status) {
         set.status = e.status;
       } else {
-        console.log("Error in matchi_routes.ts", e);
+        logger.error("Error in matchi_routes.ts", { error: e });
         set.status = 200;
       }
     }
@@ -40,31 +42,37 @@ const routes = new Elysia()
 
   .get("/courts/:court/show-image", async ({ params: { court }, set }) => {
     const id = toCourtId(court);
-    const userMessage = await showUserMessageForCourt(id);
-    if (userMessage) {
-      const { type, firstName } = userMessage;
-      let imageBuffer;
-      if (type === "start") {
-        imageBuffer = await getStartImage(firstName);
-      } else if (type === "end-free") {
-        imageBuffer = await getEndImage(firstName, true);
-      } else if (type === "end-occupied") {
-        imageBuffer = await getEndImage(firstName, false);
+    try {
+      const userMessage = await showUserMessageForCourt(id);
+      if (userMessage) {
+        const { type, firstName } = userMessage;
+        let imageBuffer;
+        if (type === "start") {
+          imageBuffer = await getStartImage(firstName);
+        } else if (type === "end-free") {
+          imageBuffer = await getEndImage(firstName, true);
+        } else if (type === "end-occupied") {
+          imageBuffer = await getEndImage(firstName, false);
+        }
+        set.headers["Content-Type"] = "image/jpg";
+        return imageBuffer;
+      } else {
+        set.status = 404;
       }
-      set.headers["Content-Type"] = "image/jpg";
-      return imageBuffer;
-    } else {
-      set.status = 404;
+    } catch (error) {
+      logger.error("Error generating image: " + JSON.stringify({ error }));
+      set.status = 500;
     }
   })
 
   .get("/images/start", async ({ set }) => {
     try {
+      logger.info("matchi_routes.ts get /images/start hello");
       const processedImageBuffer = await getStartImage("Marcus");
       set.headers["Content-Type"] = "image/jpeg";
       return processedImageBuffer;
     } catch (error) {
-      console.error("Error generating image:", error);
+      logger.error("Error generating image:", { error });
       set.status = 500;
     }
   })
@@ -75,7 +83,7 @@ const routes = new Elysia()
       set.headers["Content-Type"] = "image/jpeg";
       return processedImageBuffer;
     } catch (error) {
-      console.error("Error generating image:", error);
+      logger.error("Error generating image:", { error });
       set.status = 500;
     }
   })
@@ -86,7 +94,7 @@ const routes = new Elysia()
       set.headers["Content-Type"] = "image/jpeg";
       return processedImageBuffer;
     } catch (error) {
-      console.error("Error generating image:", error);
+      logger.error("Error generating image:", { error });
       set.status = 500;
     }
   });

@@ -2,6 +2,7 @@ import { db } from "db/db";
 import { bookingEvents, bookings, type NewBooking } from "db/schema";
 import { eq } from "drizzle-orm";
 import type { CreatedBookingObject, MatchiWebhookJson } from "matchi_types";
+import logger from "./logger";
 
 export function handleWebhook(json: MatchiWebhookJson): void {
   const handler = matchiHandlers[json["detail-type"]];
@@ -9,8 +10,8 @@ export function handleWebhook(json: MatchiWebhookJson): void {
   if (handler) {
     return handler(json);
   } else {
-    console.log("No handler for " + json["detail-type"]);
-    throw { status: 400, message: "No handler for " + json["detail-type"] };
+    logger.error("No handler for " + json["detail-type"]);
+    // throw { status: 400, message: "No handler for " + json["detail-type"] };
   }
 }
 
@@ -30,8 +31,11 @@ const matchiHandlers: {
 };
 
 async function createdBooking(bookingJson: MatchiWebhookJson) {
-  console.log(
-    "timestamp: " + bookingJson.timestamp + " eventId: " + bookingJson.id
+  logger.info(
+    "createdBooking timestamp: " +
+      bookingJson.timestamp +
+      " eventId: " +
+      bookingJson.id
   );
 
   const { booking, owner, players } =
@@ -50,7 +54,11 @@ async function createdBooking(bookingJson: MatchiWebhookJson) {
     firstName: owner.firstName,
     lastName: owner.lastName,
     issuerId: "hardcoded-issuer-id",
-    players: players.map((p) => p.email).join(", "),
+    players: players.map((p) => ({
+      email: p.email,
+      userId: p.userId,
+      isCustomer: p.isCustomer,
+    })),
     cancelled: false,
     hasShownStartMessage: false,
     hasShownEndMessage: false,
@@ -67,11 +75,11 @@ async function createdBooking(bookingJson: MatchiWebhookJson) {
       });
   } catch (e: any) {
     if (e.status === 409) {
-      console.log(
+      logger.info(
         "matchi.ts createdBooking: Booking already exists: " + booking.bookingId
       );
     } else {
-      console.log("matchi.ts createdBooking: SQL error: " + e.message);
+      logger.error("matchi.ts createdBooking: SQL error: " + e.message);
     }
   }
 
@@ -84,7 +92,7 @@ async function createdBooking(bookingJson: MatchiWebhookJson) {
       eventData: bookingJson,
     });
   } catch (e: any) {
-    console.log("matchi.ts createdBooking: SQL error: " + e.message);
+    logger.error("matchi.ts createdBooking: SQL error: " + e.message);
   }
   if (insertError) {
     throw insertError;
@@ -107,7 +115,7 @@ async function movedBooking(bookingJson: MatchiWebhookJson) {
       .where(eq(bookings.bookingId, bookingId));
   } catch (e: any) {
     moveError = e;
-    console.log("matchi.ts movedBooking: SQL error: ", e);
+    logger.error("matchi.ts movedBooking: SQL error: ", e);
   }
 
   try {
@@ -119,7 +127,7 @@ async function movedBooking(bookingJson: MatchiWebhookJson) {
       eventData: bookingJson,
     });
   } catch (e: any) {
-    console.log("matchi.ts movedBooking store event: SQL error: ", e);
+    logger.error("matchi.ts movedBooking store event: SQL error: ", e);
   }
 
   if (moveError) {
@@ -130,17 +138,17 @@ async function movedBooking(bookingJson: MatchiWebhookJson) {
 async function cancelledBooking(bookingJson: MatchiWebhookJson) {
   const { booking } = bookingJson.detail;
   const bookingId = booking.bookingId;
-  console.log("cancelling booking " + bookingId);
+  logger.info("cancelling booking " + bookingId);
   let cancelError;
   try {
     await db
       .update(bookings)
       .set({ cancelled: true })
       .where(eq(bookings.bookingId, bookingId));
-    console.log("cancelled booking " + bookingId);
+    logger.info("cancelled booking " + bookingId);
   } catch (e: any) {
     cancelError = e;
-    console.log("matchi.ts cancelledBooking: SQL error: ", e);
+    logger.error("matchi.ts cancelledBooking: SQL error: ", e);
   }
 
   try {
@@ -152,7 +160,7 @@ async function cancelledBooking(bookingJson: MatchiWebhookJson) {
       eventData: bookingJson,
     });
   } catch (e: any) {
-    console.log("matchi.ts cancelledBooking store event: SQL error: ", e);
+    logger.error("matchi.ts cancelledBooking store event: SQL error: ", e);
   }
   if (cancelError) {
     throw cancelError;
@@ -171,4 +179,9 @@ function logMatchiWebhook(json: MatchiWebhookJson) {
       missingProps.push(path);
     }
   };
+
+  addLogEntry("matchiId", json.id, "json");
+  addLogEntry("timestamp", json.timestamp, "json");
+  addLogEntry("detail-type", json["detail-type"], "json");
+  addLogEntry("detail", json.detail, "json");
 }

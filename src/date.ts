@@ -1,57 +1,70 @@
-function toDateString(date: Date) {
-  const localTime = new Date(
-    date.getTime() - date.getTimezoneOffset() * 60 * 1000
-  );
-  return localTime.toISOString().slice(0, -1) + "+02:00";
+function toDateString(date: Date): string {
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    throw new Error("Invalid date provided to toDateString");
+  }
+
+  // Create a formatter for the Stockholm timezone
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Stockholm",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(date);
+  const dateParts: { [key: string]: string } = {};
+
+  parts.forEach(({ type, value }) => {
+    dateParts[type] = value;
+  });
+
+  // Construct the date string in the correct format
+  const formattedDate = `${dateParts.year}-${dateParts.month}-${dateParts.day}T${dateParts.hour}:${dateParts.minute}:${dateParts.second}+02:00`;
+
+  return formattedDate;
+}
+
+export function toDateStringUTC(date: Date): string {
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    throw new Error("Invalid date provided to toDateStringUTC");
+  }
+
+  // Get UTC components
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
+
+  // Return UTC time (Z suffix indicates UTC)
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+}
+
+// Helper function to validate dates
+function isValidDate(date: Date): boolean {
+  return date instanceof Date && !isNaN(date.getTime());
 }
 
 function getExactHourFromNow(offset: number = 0): Date {
   const now = new Date();
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const isUTC = timeZone === "UTC";
 
-  // Create a date object for the current time in the local time zone
-  const localNow = new Date(
-    now.toLocaleString("en-US", { timeZone: "Europe/Stockholm" })
+  // Get current UTC hour
+  const utcYear = now.getUTCFullYear();
+  const utcMonth = now.getUTCMonth();
+  const utcDate = now.getUTCDate();
+  const utcHour = now.getUTCHours();
+
+  // Create new UTC date at exact hour
+  const result = new Date(
+    Date.UTC(utcYear, utcMonth, utcDate, utcHour + offset, 0, 0, 0)
   );
 
-  // Calculate the offset from UTC in hours
-  const utcOffset = -localNow.getTimezoneOffset() / 60;
-
-  // Adjust for daylight saving time
-  const isDST = isDaylightSavingTime(localNow);
-  const dstOffset = isDST ? 1 : 0;
-
-  /*console.log(
-    "timeZone: ",
-    timeZone,
-    "isUTC: ",
-    isUTC,
-    " utcOffset: ",
-    utcOffset,
-    "dstOffset: ",
-    dstOffset
-  );*/
-
-  const hour = new Date(
-    localNow.getFullYear(),
-    localNow.getMonth(),
-    localNow.getDate(),
-    localNow.getHours() + offset + (isUTC ? utcOffset + dstOffset : 0),
-    0,
-    0,
-    0
-  );
-  return hour;
-}
-
-function isDaylightSavingTime(date: Date): boolean {
-  const jan = new Date(date.getFullYear(), 0, 1);
-  const jul = new Date(date.getFullYear(), 6, 1);
-  return (
-    date.getTimezoneOffset() <
-    Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset())
-  );
+  return result;
 }
 
 export function isNearNewHour(
@@ -66,4 +79,4 @@ export function isNearNewHour(
   return { isJustBefore, isJustAfter };
 }
 
-export { getExactHourFromNow, isDaylightSavingTime, toDateString };
+export { getExactHourFromNow, toDateString };
