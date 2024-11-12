@@ -6,7 +6,11 @@ import logger from "./logger";
 
 export function handleWebhook(json: MatchiWebhookJson): void {
   const handler = matchiHandlers[json["detail-type"]];
-  logMatchiWebhook(json);
+  try {
+    logMatchiWebhook(json);
+  } catch (e) {
+    logger.error("error logging logMatchiWebhook: " + e);
+  }
   if (handler) {
     return handler(json);
   } else {
@@ -184,4 +188,6 @@ function logMatchiWebhook(json: MatchiWebhookJson) {
   addLogEntry("timestamp", json.timestamp, "json");
   addLogEntry("detail-type", json["detail-type"], "json");
   addLogEntry("detail", json.detail, "json");
+
+  logger.info("logMatchiWebhook: " + logParts.join(", "));
 }
