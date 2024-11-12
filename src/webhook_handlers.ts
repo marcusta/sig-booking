@@ -187,7 +187,7 @@ function logMatchiWebhook(json: MatchiWebhookJson) {
   addLogEntry("matchiId", json.id, "json");
   addLogEntry("timestamp", json.timestamp, "json");
   addLogEntry("detail-type", json["detail-type"], "json");
-  addLogEntry("detail", json.detail, "json");
+  addLogEntry("detail", JSON.stringify(json.detail), "json");
 
   logger.info("logMatchiWebhook: " + logParts.join(", "));
 }
