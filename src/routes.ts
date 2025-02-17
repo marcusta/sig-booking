@@ -142,7 +142,7 @@ const routes = new Elysia()
       return {
         ok: true,
         redirected: true,
-        url: `../booking_summary/${currentYear}/${currentMonth}`,
+        url: `./booking_summary/${currentYear}/${currentMonth}`,
       };
     } catch (error) {
       set.status = 500;
