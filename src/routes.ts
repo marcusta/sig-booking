@@ -142,11 +142,11 @@ const routes = new Elysia()
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11
 
-      // Set redirect header with relative path
-      set.redirect = `booking_summary/${currentYear}/${currentMonth}`;
-      set.status = 302;
-
-      return;
+      return {
+        ok: true,
+        redirected: true,
+        url: `./booking_summary/${currentYear}/${currentMonth}`,
+      };
     } catch (error) {
       set.status = 500;
       return { error: "Authentication failed" };
