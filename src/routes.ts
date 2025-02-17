@@ -156,9 +156,11 @@ const routes = new Elysia()
       const authResult = await verifyAuthFromCookie(headers, set);
       if (authResult !== true) {
         // Get base path from the request URL
-        const url = new URL(request.url);
-        const basePath = url.pathname.split("/booking_summary")[0];
-        set.redirect = `${basePath}/login`;
+        const url = request.url;
+        const basePath = url.split("/booking_summary")[0];
+        const redirectUrl = `${basePath}/login`;
+        console.log("redirectUrl", redirectUrl);
+        set.redirect = redirectUrl;
         set.status = 302;
         return;
       }
