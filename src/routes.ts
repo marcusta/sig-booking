@@ -150,41 +150,47 @@ const routes = new Elysia()
     }
   })
 
-  .get("/booking_summary/:year/:month", async ({ params, set, headers }) => {
-    const authResult = await verifyAuthFromCookie(headers, set);
-    if (authResult !== true) {
-      // Use relative path for redirect
-      set.redirect = "../login";
-      set.status = 302;
-      return;
-    }
-
-    // Continue with existing logic
-    try {
-      const year = parseInt(params.year, 10);
-      const month = parseInt(params.month, 10);
-      const summary = await getMonthlyBookingSummary(year, month);
-      const html = generateBookingSummaryHTML(summary, year, month);
-      set.headers["Content-Type"] = "text/html";
-      return html;
-    } catch (error) {
-      if (error instanceof Error) {
-        set.status = 400;
-        return { error: error.message };
+  .get(
+    "/booking_summary/:year/:month",
+    async ({ params, set, headers, request }) => {
+      const authResult = await verifyAuthFromCookie(headers, set);
+      if (authResult !== true) {
+        // Get base path from the request URL
+        const url = new URL(request.url);
+        const basePath = url.pathname.split("/booking_summary")[0];
+        set.redirect = `${basePath}/login`;
+        set.status = 302;
+        return;
       }
-      set.status = 500;
-      return { error: "An unexpected error occurred." };
-    }
-  })
 
-  .get("/logout", ({ set }) => {
-    // Clear the auth cookie by setting it to expire immediately
+      // Continue with existing logic
+      try {
+        const year = parseInt(params.year, 10);
+        const month = parseInt(params.month, 10);
+        const summary = await getMonthlyBookingSummary(year, month);
+        const html = generateBookingSummaryHTML(summary, year, month);
+        set.headers["Content-Type"] = "text/html";
+        return html;
+      } catch (error) {
+        if (error instanceof Error) {
+          set.status = 400;
+          return { error: error.message };
+        }
+        set.status = 500;
+        return { error: "An unexpected error occurred." };
+      }
+    }
+  )
+
+  .get("/logout", ({ set, headers, request }) => {
+    // Clear the auth cookie
     set.headers[
       "Set-Cookie"
     ] = `auth=; Path=/; HttpOnly; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 
-    // Use relative path for redirect
-    set.redirect = "./login";
+    const url = new URL(request.url);
+    const basePath = url.pathname.split("/logout")[0];
+    set.redirect = `${basePath}/login`;
     set.status = 302;
     return;
   });
