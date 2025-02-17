@@ -54,10 +54,14 @@ export async function validateCredentials(
   password: string
 ): Promise<boolean> {
   const { users } = await loadUsers();
+  console.log("validating credentials for", username);
   const user = users.find((u) => u.username === username);
+  console.log("user", user);
   if (!user) return false;
 
   const hashedPassword = await hashPassword(password);
+  console.log("hashedPassword", hashedPassword);
+  console.log("user.passwordHash", user.passwordHash);
   return user.passwordHash === hashedPassword;
 }
 

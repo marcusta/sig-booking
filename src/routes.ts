@@ -121,14 +121,17 @@ const routes = new Elysia()
       password: string;
     };
 
+    console.log("login", username, password);
+
     if (!(await validateCredentials(username, password))) {
+      console.log("invalid credentials for", username);
       set.status = 401;
       return { error: "Invalid credentials" };
     }
 
     try {
       const token = await createSessionToken(username);
-
+      console.log("token created");
       // Set the JWT token in a cookie
       set.headers[
         "Set-Cookie"
