@@ -155,10 +155,12 @@ const routes = new Elysia()
     async ({ params, set, headers, request }) => {
       const authResult = await verifyAuthFromCookie(headers, set);
       if (authResult !== true) {
-        // Get base path from the request URL
-        const url = request.url;
-        console.log("url", url);
-        const basePath = url.split("/booking_summary")[0];
+        // Get base path from the referer URL
+        const referer = headers.referer || headers.referrer;
+        console.log("referer", referer);
+        const basePath = referer
+          ? new URL(referer).pathname.split("/booking_summary")[0]
+          : "";
         const redirectUrl = `${basePath}/login`;
         console.log("redirectUrl", redirectUrl);
         set.redirect = redirectUrl;
@@ -185,14 +187,16 @@ const routes = new Elysia()
     }
   )
 
-  .get("/logout", ({ set, headers, request }) => {
+  .get("/logout", ({ set, headers }) => {
     // Clear the auth cookie
     set.headers[
       "Set-Cookie"
     ] = `auth=; Path=/; HttpOnly; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 
-    const url = new URL(request.url);
-    const basePath = url.pathname.split("/logout")[0];
+    const referer = headers.referer || headers.referrer;
+    const basePath = referer
+      ? new URL(referer).pathname.split("/logout")[0]
+      : "";
     set.redirect = `${basePath}/login`;
     set.status = 302;
     return;
