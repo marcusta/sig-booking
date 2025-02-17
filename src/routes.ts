@@ -121,10 +121,7 @@ const routes = new Elysia()
       password: string;
     };
 
-    console.log("login", username, password);
-
     if (!(await validateCredentials(username, password))) {
-      console.log("invalid credentials for", username);
       set.status = 401;
       return { error: "Invalid credentials" };
     }
@@ -154,22 +151,21 @@ const routes = new Elysia()
   })
 
   .get("/booking_summary/:year/:month", async ({ params, set, headers }) => {
-    console.log("booking_summary/:year/:month");
     const authResult = await verifyAuthFromCookie(headers, set);
-    console.log("authResult", authResult);
     if (authResult !== true) {
-      return authResult;
+      // Use relative path for redirect
+      set.redirect = "../login";
+      set.status = 302;
+      return;
     }
 
     // Continue with existing logic
     try {
-      console.log("bookingSummary params", params);
       const year = parseInt(params.year, 10);
       const month = parseInt(params.month, 10);
       const summary = await getMonthlyBookingSummary(year, month);
       const html = generateBookingSummaryHTML(summary, year, month);
       set.headers["Content-Type"] = "text/html";
-      console.log("bookingSummary returning html document");
       return html;
     } catch (error) {
       if (error instanceof Error) {
@@ -187,8 +183,8 @@ const routes = new Elysia()
       "Set-Cookie"
     ] = `auth=; Path=/; HttpOnly; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 
-    // Redirect to login page
-    set.redirect = "/login";
+    // Use relative path for redirect
+    set.redirect = "./login";
     set.status = 302;
     return;
   });
@@ -240,9 +236,7 @@ async function verifyAuthFromCookie(headers: any, set: any) {
 
   const isAuthenticated = await verifySessionToken(authToken);
   if (!isAuthenticated) {
-    set.status = 401;
-    set.headers["Content-Type"] = "application/json";
-    return { error: "Unauthorized. Please login first." };
+    return false;
   }
   return true;
 }
