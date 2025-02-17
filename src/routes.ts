@@ -157,6 +157,7 @@ const routes = new Elysia()
       if (authResult !== true) {
         // Get base path from the request URL
         const url = request.url;
+        console.log("url", url);
         const basePath = url.split("/booking_summary")[0];
         const redirectUrl = `${basePath}/login`;
         console.log("redirectUrl", redirectUrl);
