@@ -1,8 +1,9 @@
 # Based on https://raw.githubusercontent.com/github/gitignore/main/Node.gitignore
 
 data/matchi.db
+data/matchi_new.db
 data/users.json
-
+_matchi.db.old
 # Logs
 
 logs
