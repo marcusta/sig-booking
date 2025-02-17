@@ -106,6 +106,7 @@
             console.log("response", response);
 
             if (response.ok) {
+              console.log("response.ok, redirected", response.redirected);
               if (response.redirected) {
                 console.log("redirected to", response.url);
                 window.location.href = response.url;
