@@ -103,13 +103,14 @@
               body: JSON.stringify(formData),
             });
 
-            console.log("response", response);
+            const responseJson = await response.json();
+            console.log("responseJson", responseJson);
 
-            if (response.ok) {
-              console.log("response.ok, redirected", response.redirected);
-              if (response.redirected) {
-                console.log("redirected to", response.url);
-                window.location.href = response.url;
+            if (responseJson.ok) {
+              console.log("response.ok, redirected", responseJson.redirected);
+              if (responseJson.redirected) {
+                console.log("redirected to", responseJson.url);
+                window.location.href = responseJson.url;
               } else {
                 const data = await response.json();
                 console.log("data", data);
@@ -118,9 +119,8 @@
                 }
               }
             } else {
-              const data = await response.json();
-              console.log("data", data);
-              showError(data.error || "Login failed");
+              console.log("responseJson.error", responseJson.error);
+              showError(responseJson.error || "Login failed");
             }
           } catch (error) {
             console.error("Login error:", error);
