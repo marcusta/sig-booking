@@ -142,7 +142,7 @@ const routes = new Elysia()
       return {
         ok: true,
         redirected: true,
-        url: `./booking_summary/${currentYear}/${currentMonth}`,
+        url: `../booking_summary/${currentYear}/${currentMonth}`,
       };
     } catch (error) {
       set.status = 500;
@@ -150,54 +150,41 @@ const routes = new Elysia()
     }
   })
 
-  .get(
-    "/booking_summary/:year/:month",
-    async ({ params, set, headers, request }) => {
-      const authResult = await verifyAuthFromCookie(headers, set);
-      if (authResult !== true) {
-        // Get base path from the referer URL
-        const referer = headers.referer || headers.referrer;
-        console.log("referer", referer);
-        const basePath = referer
-          ? new URL(referer).pathname.split("/booking_summary")[0]
-          : "";
-        const redirectUrl = `${basePath}/login`;
-        console.log("redirectUrl", redirectUrl);
-        set.redirect = redirectUrl;
-        set.status = 302;
-        return;
-      }
-
-      // Continue with existing logic
-      try {
-        const year = parseInt(params.year, 10);
-        const month = parseInt(params.month, 10);
-        const summary = await getMonthlyBookingSummary(year, month);
-        const html = generateBookingSummaryHTML(summary, year, month);
-        set.headers["Content-Type"] = "text/html";
-        return html;
-      } catch (error) {
-        if (error instanceof Error) {
-          set.status = 400;
-          return { error: error.message };
-        }
-        set.status = 500;
-        return { error: "An unexpected error occurred." };
-      }
+  .get("/booking_summary/:year/:month", async ({ params, set, headers }) => {
+    const authResult = await verifyAuthFromCookie(headers, set);
+    if (authResult !== true) {
+      // Use relative path
+      set.redirect = "../login";
+      set.status = 302;
+      return;
     }
-  )
 
-  .get("/logout", ({ set, headers }) => {
+    // Continue with existing logic
+    try {
+      const year = parseInt(params.year, 10);
+      const month = parseInt(params.month, 10);
+      const summary = await getMonthlyBookingSummary(year, month);
+      const html = generateBookingSummaryHTML(summary, year, month);
+      set.headers["Content-Type"] = "text/html";
+      return html;
+    } catch (error) {
+      if (error instanceof Error) {
+        set.status = 400;
+        return { error: error.message };
+      }
+      set.status = 500;
+      return { error: "An unexpected error occurred." };
+    }
+  })
+
+  .get("/logout", ({ set }) => {
     // Clear the auth cookie
     set.headers[
       "Set-Cookie"
     ] = `auth=; Path=/; HttpOnly; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 
-    const referer = headers.referer || headers.referrer;
-    const basePath = referer
-      ? new URL(referer).pathname.split("/logout")[0]
-      : "";
-    set.redirect = `${basePath}/login`;
+    // Use relative path
+    set.redirect = "../login";
     set.status = 302;
     return;
   });
