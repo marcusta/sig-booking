@@ -154,7 +154,7 @@ const routes = new Elysia()
     const authResult = await verifyAuthFromCookie(headers, set);
     if (authResult !== true) {
       // Use relative path
-      set.redirect = "../login";
+      set.redirect = "../../login";
       set.status = 302;
       return;
     }
