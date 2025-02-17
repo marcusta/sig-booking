@@ -1,11 +1,20 @@
 import { Elysia } from "elysia";
+import { readFileSync } from "fs";
 import type { MatchiWebhookJson } from "matchi_types";
+import { getMonthlyBookingSummary } from "services/booking_analysis";
+import { generateBookingSummaryHTML } from "services/html_generator";
 import { showUserMessageForCourt } from "user_message";
 import { handleWebhook } from "webhook_handlers";
 import { addTextToImage } from "./image/image-generator";
 import logger from "./logger";
+import {
+  createSessionToken,
+  validateCredentials,
+  verifySessionToken,
+} from "./middleware/auth";
 
 const routes = new Elysia()
+
   // Home route
   .get("/", () => ({
     message: "Welcome to the SIG Matchi webhook server!",
@@ -97,6 +106,88 @@ const routes = new Elysia()
       logger.error("Error generating image:", { error });
       set.status = 500;
     }
+  })
+
+  // Login routes
+  .get("/login", ({ set }) => {
+    set.headers["Content-Type"] = "text/html";
+    const loginPage = readFileSync("./src/pages/login.html", "utf-8");
+    return loginPage;
+  })
+
+  .post("/login", async ({ body, set }) => {
+    const { username, password } = body as {
+      username: string;
+      password: string;
+    };
+
+    if (!(await validateCredentials(username, password))) {
+      set.status = 401;
+      return { error: "Invalid credentials" };
+    }
+
+    try {
+      const token = await createSessionToken(username);
+
+      // Set the JWT token in a cookie
+      set.headers[
+        "Set-Cookie"
+      ] = `auth=${token}; Path=/; HttpOnly; SameSite=Strict`;
+
+      // Get current date for the redirect
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11
+
+      // Set redirect header with relative path
+      set.redirect = `booking_summary/${currentYear}/${currentMonth}`;
+      set.status = 302;
+
+      return;
+    } catch (error) {
+      set.status = 500;
+      return { error: "Authentication failed" };
+    }
+  })
+
+  .get("/booking_summary/:year/:month", async ({ params, set, headers }) => {
+    console.log("booking_summary/:year/:month");
+    const authResult = await verifyAuthFromCookie(headers, set);
+    console.log("authResult", authResult);
+    if (authResult !== true) {
+      return authResult;
+    }
+
+    // Continue with existing logic
+    try {
+      console.log("bookingSummary params", params);
+      const year = parseInt(params.year, 10);
+      const month = parseInt(params.month, 10);
+      const summary = await getMonthlyBookingSummary(year, month);
+      const html = generateBookingSummaryHTML(summary, year, month);
+      set.headers["Content-Type"] = "text/html";
+      console.log("bookingSummary returning html document");
+      return html;
+    } catch (error) {
+      if (error instanceof Error) {
+        set.status = 400;
+        return { error: error.message };
+      }
+      set.status = 500;
+      return { error: "An unexpected error occurred." };
+    }
+  })
+
+  .get("/logout", ({ set }) => {
+    // Clear the auth cookie by setting it to expire immediately
+    set.headers[
+      "Set-Cookie"
+    ] = `auth=; Path=/; HttpOnly; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+
+    // Redirect to login page
+    set.redirect = "/login";
+    set.status = 302;
+    return;
   });
 
 function toCourtId(court: string): string {
@@ -135,6 +226,22 @@ async function getEndImage(
     : "Nästa spelare kommer strax. Dags att börja avsluta :)";
   const processedImageBuffer = await addTextToImage(normalText, boldText);
   return processedImageBuffer;
+}
+
+async function verifyAuthFromCookie(headers: any, set: any) {
+  const cookieHeader = headers.cookie || "";
+  const authToken = cookieHeader
+    .split(";")
+    .find((c: string) => c.trim().startsWith("auth="))
+    ?.split("=")[1];
+
+  const isAuthenticated = await verifySessionToken(authToken);
+  if (!isAuthenticated) {
+    set.status = 401;
+    set.headers["Content-Type"] = "application/json";
+    return { error: "Unauthorized. Please login first." };
+  }
+  return true;
 }
 
 export default routes;

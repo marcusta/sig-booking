@@ -6,11 +6,12 @@
     "migrate": "bun src/db/migrate.ts",
     "db:generate": "bunx drizzle-kit generate --dialect sqlite --schema ./src/db/schema.ts --out ./src/db/migrations",
     "db:studio": "bunx drizzle-kit studio --dialect sqlite --schema ./src/db/schema.ts --out ./src/db/migrations",
-    "dev": "bun run src/index.ts"
+    "dev": "bun run --watch src/server.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.1.11",
-    "drizzle-kit": "^0.26.2"
+    "drizzle-kit": "^0.26.2",
+    "@types/jsonwebtoken": "^9.0.8"
   },
   "peerDependencies": {
     "typescript": "^5.6.3"
@@ -19,7 +20,7 @@
     "@elysiajs/static": "^1.1.1",
     "better-sqlite3": "^11.4.0",
     "drizzle-orm": "^0.35.2",
-    "elysia": "^1.1.22",
+    "jsonwebtoken": "^9.0.2",
     "sharp": "^0.33.5",
     "winston": "^3.15.0",
     "winston-daily-rotate-file": "^5.0.0"
