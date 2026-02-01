@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "migrate": "bun src/db/migrate.ts",
+    "db:migrate": "bun ./scripts/migrate.ts",
+    "db:health": "bun ./scripts/health.ts",
     "db:generate": "bunx drizzle-kit generate --dialect sqlite --schema ./src/db/schema.ts --out ./src/db/migrations",
     "db:studio": "bunx drizzle-kit studio --dialect sqlite --schema ./src/db/schema.ts --out ./src/db/migrations",
     "dev": "bun run --watch src/server.ts"

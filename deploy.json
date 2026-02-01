@@ -1,0 +1,9 @@
+{
+  "serviceName": "bookings",
+  "serverFolder": "sig-booking",
+  "database": {
+    "path": "data/matchi.db",
+    "migrate": "bun run db:migrate",
+    "validate": "bun run db:health"
+  }
+}
