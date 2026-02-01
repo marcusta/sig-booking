@@ -189,7 +189,10 @@ async function handleShowImage(courtId: string, set: any) {
   try {
     const userMessage = await showUserMessageForCourt(courtId);
     if (userMessage) {
-      const { type, firstName } = userMessage;
+      const { type, firstName: rawFirstName } = userMessage;
+      const firstName = rawFirstName.startsWith("Ambassadör ")
+        ? "Amb " + rawFirstName.slice("Ambassadör ".length)
+        : rawFirstName;
       let imageBuffer;
       if (type === "start") {
         imageBuffer = await getStartImage(firstName);
