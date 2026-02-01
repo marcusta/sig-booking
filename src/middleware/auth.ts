@@ -4,8 +4,11 @@ import path from "path";
 import { verifyPassword } from "../utils/hash";
 import logger from "../logger";
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) throw new Error("JWT_SECRET environment variable is required");
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET environment variable is required");
+  return secret;
+}
 
 interface User {
   username: string;
@@ -31,7 +34,7 @@ async function loadUsers(): Promise<UsersFile> {
 // Pure authentication functions
 export async function createSessionToken(username: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    jwt.sign({ username }, JWT_SECRET, { expiresIn: "24h" }, (err, token) => {
+    jwt.sign({ username }, getJwtSecret(), { expiresIn: "24h" }, (err, token) => {
       if (err) reject(err);
       else resolve(token as string);
     });
@@ -44,7 +47,7 @@ export async function verifySessionToken(
   if (!token) return false;
 
   return new Promise((resolve) => {
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, getJwtSecret(), (err, decoded) => {
       if (err) resolve(false);
       else resolve(true);
     });

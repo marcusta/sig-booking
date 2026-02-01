@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import type { CreatedBookingObject, MatchiWebhookJson } from "matchi_types";
 import logger from "./logger";
 
-export function handleWebhook(json: MatchiWebhookJson): void {
+export async function handleWebhook(json: MatchiWebhookJson): Promise<void> {
   const handler = matchiHandlers[json["detail-type"]];
   try {
     logMatchiWebhook(json);
@@ -12,15 +12,14 @@ export function handleWebhook(json: MatchiWebhookJson): void {
     logger.error("error logging logMatchiWebhook: " + e);
   }
   if (handler) {
-    return handler(json);
+    await handler(json);
   } else {
     logger.error("No handler for " + json["detail-type"]);
-    // throw { status: 400, message: "No handler for " + json["detail-type"] };
   }
 }
 
 interface MatchiHandler {
-  (matchiWebhookJson: MatchiWebhookJson): void;
+  (matchiWebhookJson: MatchiWebhookJson): Promise<void>;
 }
 
 const matchiHandlers: {

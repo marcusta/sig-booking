@@ -8,6 +8,8 @@ import { handleWebhook } from "webhook_handlers";
 import { BAY_TO_COURT, VALID_MATCHI_COURT_IDS } from "./courts";
 import { addTextToImage } from "./image/image-generator";
 import logger from "./logger";
+
+const secureCookie = process.env.NODE_ENV === "production" ? "; Secure" : "";
 import {
   createSessionToken,
   validateCredentials,
@@ -118,7 +120,7 @@ const routes = new Elysia()
       // Set the JWT token in a cookie
       set.headers[
         "Set-Cookie"
-      ] = `auth=${token}; Path=/; HttpOnly; SameSite=Strict; Secure`;
+      ] = `auth=${token}; Path=/; HttpOnly; SameSite=Strict${secureCookie}`;
 
       // Get current date for the redirect
       const now = new Date();
@@ -167,7 +169,7 @@ const routes = new Elysia()
     // Clear the auth cookie
     set.headers[
       "Set-Cookie"
-    ] = `auth=; Path=/; HttpOnly; SameSite=Strict; Secure; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    ] = `auth=; Path=/; HttpOnly; SameSite=Strict${secureCookie}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 
     // Use relative path
     set.redirect = "../login";
