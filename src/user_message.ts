@@ -7,6 +7,7 @@ import logger from "logger";
 export interface UserMessage {
   type: "start" | "end-free" | "end-occupied";
   firstName: string;
+  lastName: string;
 }
 
 async function setHasShownStartMessage(bookingId: string) {
@@ -61,6 +62,7 @@ export async function showUserMessageForCourt(
     return {
       type: "start",
       firstName: currentBooking.firstName,
+      lastName: currentBooking.lastName,
     };
   }
 
@@ -74,6 +76,7 @@ export async function showUserMessageForCourt(
     return {
       type: "start",
       firstName: nextBooking.firstName,
+      lastName: nextBooking.lastName,
     };
   }
 
@@ -88,6 +91,7 @@ export async function showUserMessageForCourt(
       return {
         type: "end-free",
         firstName: currentBooking.firstName,
+        lastName: currentBooking.lastName,
       };
     } else {
       await setHasShownEndMessage(currentBooking.bookingId);
@@ -97,6 +101,7 @@ export async function showUserMessageForCourt(
         return {
           type: "end-occupied",
           firstName: currentBooking.firstName,
+          lastName: currentBooking.lastName,
         };
       }
     }
