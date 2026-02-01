@@ -51,28 +51,19 @@ const routes = new Elysia()
 
   .get("/courts/:court/show-image", async ({ params: { court }, set }) => {
     const id = toCourtId(court);
-    try {
-      const userMessage = await showUserMessageForCourt(id);
-      if (userMessage) {
-        const { type, firstName } = userMessage;
-        let imageBuffer;
-        if (type === "start") {
-          imageBuffer = await getStartImage(firstName);
-        } else if (type === "end-free") {
-          imageBuffer = await getEndImage(firstName, true);
-        } else if (type === "end-occupied") {
-          imageBuffer = await getEndImage(firstName, false);
-        }
-        set.headers["Content-Type"] = "image/jpg";
-        return imageBuffer;
-      } else {
-        set.status = 404;
-      }
-    } catch (error) {
-      logger.error("Error generating image: " + JSON.stringify({ error }));
-      set.status = 500;
-    }
+    return handleShowImage(id, set);
   })
+
+  .get(
+    "/matchi-courts/:matchiCourtId/show-image",
+    async ({ params: { matchiCourtId }, set }) => {
+      if (!isValidMatchiCourtId(matchiCourtId)) {
+        set.status = 404;
+        return;
+      }
+      return handleShowImage(matchiCourtId, set);
+    }
+  )
 
   .get("/images/start", async ({ set }) => {
     try {
@@ -189,21 +180,49 @@ const routes = new Elysia()
     return;
   });
 
+const courtMapping: { [key: string]: string } = {
+  "1": "2068",
+  "2": "2069",
+  "3": "2074",
+  "4": "2071",
+  "5": "2072",
+  "6": "2070",
+  "7": "2076",
+  "8": "2077",
+};
+
+const validMatchiCourtIds = new Set(Object.values(courtMapping));
+
 function toCourtId(court: string): string {
-  const courts: { [key: string]: string } = {
-    "1": "2068",
-    "2": "2069",
-    "3": "2074",
-    "4": "2071",
-    "5": "2072",
-    "6": "2070",
-    "7": "2076",
-    "8": "2077",
-  };
-  if (courts[court]) {
-    return courts[court];
+  return courtMapping[court] ?? court;
+}
+
+function isValidMatchiCourtId(id: string): boolean {
+  return validMatchiCourtIds.has(id);
+}
+
+async function handleShowImage(courtId: string, set: any) {
+  try {
+    const userMessage = await showUserMessageForCourt(courtId);
+    if (userMessage) {
+      const { type, firstName } = userMessage;
+      let imageBuffer;
+      if (type === "start") {
+        imageBuffer = await getStartImage(firstName);
+      } else if (type === "end-free") {
+        imageBuffer = await getEndImage(firstName, true);
+      } else if (type === "end-occupied") {
+        imageBuffer = await getEndImage(firstName, false);
+      }
+      set.headers["Content-Type"] = "image/jpg";
+      return imageBuffer;
+    } else {
+      set.status = 404;
+    }
+  } catch (error) {
+    logger.error("Error generating image: " + JSON.stringify({ error }));
+    set.status = 500;
   }
-  return court;
 }
 
 async function getStartImage(firstName: string) {
