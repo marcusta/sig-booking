@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(sqlite3:*)",
+      "Bash(bun test:*)",
+      "Bash(bun build:*)",
+      "Bash(JWT_SECRET=test bun build:*)"
+    ]
+  }
+}
