@@ -1,33 +1,3 @@
-function toDateString(date: Date): string {
-  if (!(date instanceof Date) || isNaN(date.getTime())) {
-    throw new Error("Invalid date provided to toDateString");
-  }
-
-  // Create a formatter for the Stockholm timezone
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Europe/Stockholm",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(date);
-  const dateParts: { [key: string]: string } = {};
-
-  parts.forEach(({ type, value }) => {
-    dateParts[type] = value;
-  });
-
-  // Construct the date string in the correct format
-  const formattedDate = `${dateParts.year}-${dateParts.month}-${dateParts.day}T${dateParts.hour}:${dateParts.minute}:${dateParts.second}+02:00`;
-
-  return formattedDate;
-}
-
 export function toDateStringUTC(date: Date): string {
   if (!(date instanceof Date) || isNaN(date.getTime())) {
     throw new Error("Invalid date provided to toDateStringUTC");
@@ -67,6 +37,7 @@ function getExactHourFromNow(offset: number = 0): Date {
   return result;
 }
 
+// getMinutes() is timezone-safe since minutes are invariant across timezones.
 export function isNearNewHour(
   beforeMinutes: number = 5,
   afterMinutes: number = 10
@@ -79,4 +50,4 @@ export function isNearNewHour(
   return { isJustBefore, isJustAfter };
 }
 
-export { getExactHourFromNow, toDateString };
+export { getExactHourFromNow };

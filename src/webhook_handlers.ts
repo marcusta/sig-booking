@@ -68,15 +68,38 @@ async function createdBooking(bookingJson: MatchiWebhookJson) {
     hasShownEndMessage: false,
   };
 
-  let insertError;
   try {
-    await db
-      .insert(bookings)
-      .values(bookingToStore)
-      .onConflictDoUpdate({
-        target: [bookings.bookingId],
-        set: bookingToStore,
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(bookings)
+        .values(bookingToStore)
+        .onConflictDoUpdate({
+          target: [bookings.bookingId],
+          set: {
+            courtId: bookingToStore.courtId,
+            courtName: bookingToStore.courtName,
+            endTime: bookingToStore.endTime,
+            splitPayment: bookingToStore.splitPayment,
+            startTime: bookingToStore.startTime,
+            customerId: bookingToStore.customerId,
+            email: bookingToStore.email,
+            userId: bookingToStore.userId,
+            firstName: bookingToStore.firstName,
+            lastName: bookingToStore.lastName,
+            issuerId: bookingToStore.issuerId,
+            players: bookingToStore.players,
+            cancelled: bookingToStore.cancelled,
+          },
+        });
+
+      await tx.insert(bookingEvents).values({
+        matchiId: bookingJson.id,
+        matchiTimestamp: bookingJson.timestamp,
+        bookingId: booking.bookingId,
+        timestamp: bookingJson.timestamp,
+        eventData: bookingJson,
       });
+    });
   } catch (e: any) {
     if (e.status === 409) {
       logger.info(
@@ -85,57 +108,37 @@ async function createdBooking(bookingJson: MatchiWebhookJson) {
     } else {
       logger.error("matchi.ts createdBooking: SQL error: " + e.message);
     }
-  }
-
-  try {
-    await db.insert(bookingEvents).values({
-      matchiId: bookingJson.id,
-      matchiTimestamp: bookingJson.timestamp,
-      bookingId: booking.bookingId,
-      timestamp: bookingJson.timestamp,
-      eventData: bookingJson,
-    });
-  } catch (e: any) {
-    logger.error("matchi.ts createdBooking: SQL error: " + e.message);
-  }
-  if (insertError) {
-    throw insertError;
+    throw e;
   }
 }
 
 async function movedBooking(bookingJson: MatchiWebhookJson) {
   const booking = (bookingJson.detail as CreatedBookingObject).booking;
   const { bookingId, courtId, courtName, startTime, endTime } = booking;
-  let moveError;
-  try {
-    await db
-      .update(bookings)
-      .set({
-        courtId,
-        courtName,
-        startTime,
-        endTime,
-      })
-      .where(eq(bookings.bookingId, bookingId));
-  } catch (e: any) {
-    moveError = e;
-    logger.error("matchi.ts movedBooking: SQL error: ", e);
-  }
 
   try {
-    await db.insert(bookingEvents).values({
-      matchiId: bookingJson.id,
-      matchiTimestamp: bookingJson.timestamp,
-      bookingId,
-      timestamp: bookingJson.timestamp,
-      eventData: bookingJson,
+    await db.transaction(async (tx) => {
+      await tx
+        .update(bookings)
+        .set({
+          courtId,
+          courtName,
+          startTime,
+          endTime,
+        })
+        .where(eq(bookings.bookingId, bookingId));
+
+      await tx.insert(bookingEvents).values({
+        matchiId: bookingJson.id,
+        matchiTimestamp: bookingJson.timestamp,
+        bookingId,
+        timestamp: bookingJson.timestamp,
+        eventData: bookingJson,
+      });
     });
   } catch (e: any) {
-    logger.error("matchi.ts movedBooking store event: SQL error: ", e);
-  }
-
-  if (moveError) {
-    throw moveError;
+    logger.error("matchi.ts movedBooking: SQL error: ", e);
+    throw e;
   }
 }
 
@@ -143,31 +146,26 @@ async function cancelledBooking(bookingJson: MatchiWebhookJson) {
   const { booking } = bookingJson.detail;
   const bookingId = booking.bookingId;
   logger.info("cancelling booking " + bookingId);
-  let cancelError;
-  try {
-    await db
-      .update(bookings)
-      .set({ cancelled: true })
-      .where(eq(bookings.bookingId, bookingId));
-    logger.info("cancelled booking " + bookingId);
-  } catch (e: any) {
-    cancelError = e;
-    logger.error("matchi.ts cancelledBooking: SQL error: ", e);
-  }
 
   try {
-    await db.insert(bookingEvents).values({
-      matchiId: bookingJson.id,
-      matchiTimestamp: bookingJson.timestamp,
-      bookingId,
-      timestamp: bookingJson.timestamp,
-      eventData: bookingJson,
+    await db.transaction(async (tx) => {
+      await tx
+        .update(bookings)
+        .set({ cancelled: true })
+        .where(eq(bookings.bookingId, bookingId));
+
+      await tx.insert(bookingEvents).values({
+        matchiId: bookingJson.id,
+        matchiTimestamp: bookingJson.timestamp,
+        bookingId,
+        timestamp: bookingJson.timestamp,
+        eventData: bookingJson,
+      });
     });
+    logger.info("cancelled booking " + bookingId);
   } catch (e: any) {
-    logger.error("matchi.ts cancelledBooking store event: SQL error: ", e);
-  }
-  if (cancelError) {
-    throw cancelError;
+    logger.error("matchi.ts cancelledBooking: SQL error: ", e);
+    throw e;
   }
 }
 

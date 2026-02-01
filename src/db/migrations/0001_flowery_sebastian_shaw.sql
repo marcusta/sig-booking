@@ -1,0 +1,1 @@
+CREATE INDEX `booking_query_idx` ON `bookings` (`courtId`,`startTime`,`endTime`,`cancelled`);

@@ -5,6 +5,7 @@ import { getMonthlyBookingSummary } from "services/booking_analysis";
 import { generateBookingSummaryHTML } from "services/html_generator";
 import { showUserMessageForCourt } from "user_message";
 import { handleWebhook } from "webhook_handlers";
+import { BAY_TO_COURT, VALID_MATCHI_COURT_IDS } from "./courts";
 import { addTextToImage } from "./image/image-generator";
 import logger from "./logger";
 import {
@@ -23,30 +24,25 @@ const routes = new Elysia()
   .get("*", ({ set }) => {
     set.status = 404;
     return {
-      message: "Not found, from matchi_routes.ts",
+      message: "Not found, from routes.ts",
     };
   })
 
-  .post("/hook", ({ headers, body, set }) => {
+  .post("/hook", async ({ headers, body, set }) => {
     // read header x-matchi-signature from request
     const signature = headers["x-matchi-signature"] as string;
-    logger.info("matchi_routes.ts hook hello", { signature });
+    logger.info("routes.ts hook hello", { signature });
     if (!signature) {
       set.status = 400;
       return;
     }
     const json = body;
     try {
-      handleWebhook(json as MatchiWebhookJson);
-      set.status = 200;
+      await handleWebhook(json as MatchiWebhookJson);
     } catch (e: any) {
-      if (e.status) {
-        set.status = e.status;
-      } else {
-        logger.error("Error in matchi_routes.ts", { error: e });
-        set.status = 200;
-      }
+      logger.error("Error in routes.ts", { error: e });
     }
+    set.status = 200;
   })
 
   .get("/courts/:court/show-image", async ({ params: { court }, set }) => {
@@ -67,7 +63,7 @@ const routes = new Elysia()
 
   .get("/images/start", async ({ set }) => {
     try {
-      logger.info("matchi_routes.ts get /images/start hello");
+      logger.info("routes.ts get /images/start hello");
       const processedImageBuffer = await getStartImage("Marcus");
       set.headers["Content-Type"] = "image/jpeg";
       return processedImageBuffer;
@@ -119,11 +115,10 @@ const routes = new Elysia()
 
     try {
       const token = await createSessionToken(username);
-      console.log("token created");
       // Set the JWT token in a cookie
       set.headers[
         "Set-Cookie"
-      ] = `auth=${token}; Path=/; HttpOnly; SameSite=Strict`;
+      ] = `auth=${token}; Path=/; HttpOnly; SameSite=Strict; Secure`;
 
       // Get current date for the redirect
       const now = new Date();
@@ -172,7 +167,7 @@ const routes = new Elysia()
     // Clear the auth cookie
     set.headers[
       "Set-Cookie"
-    ] = `auth=; Path=/; HttpOnly; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    ] = `auth=; Path=/; HttpOnly; SameSite=Strict; Secure; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 
     // Use relative path
     set.redirect = "../login";
@@ -180,25 +175,12 @@ const routes = new Elysia()
     return;
   });
 
-const courtMapping: { [key: string]: string } = {
-  "1": "2068",
-  "2": "2069",
-  "3": "2074",
-  "4": "2071",
-  "5": "2072",
-  "6": "2070",
-  "7": "2076",
-  "8": "2077",
-};
-
-const validMatchiCourtIds = new Set(Object.values(courtMapping));
-
 function toCourtId(court: string): string {
-  return courtMapping[court] ?? court;
+  return BAY_TO_COURT[court] ?? court;
 }
 
 function isValidMatchiCourtId(id: string): boolean {
-  return validMatchiCourtIds.has(id);
+  return VALID_MATCHI_COURT_IDS.has(id);
 }
 
 async function handleShowImage(courtId: string, set: any) {

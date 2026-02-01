@@ -1,4 +1,5 @@
 import { and, gte, lt } from "drizzle-orm";
+import { COURT_TO_BAY } from "../courts";
 import { db } from "../db/db";
 import type { Booking } from "../db/schema";
 import { bookings } from "../db/schema";
@@ -22,30 +23,28 @@ export interface BayUtilization {
   utilizationPercentage: number;
 }
 
-// Map court IDs to bay numbers
 function courtIdToBayNumber(courtId: string): number {
-  const mapping: Record<string, number> = {
-    "2068": 1,
-    "2069": 2,
-    "2074": 3,
-    "2071": 4,
-    "2072": 5,
-    "2070": 6,
-    "2076": 7,
-    "2077": 8,
-  };
-  return mapping[courtId] || 0;
+  return COURT_TO_BAY[courtId] || 0;
 }
 
 // Helper function to check if a given time is prime time
 function isPrimeTime(date: Date): boolean {
-  const hour = date.getHours();
-  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+  const stockholmHour = parseInt(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Stockholm",
+    hour: "2-digit",
+    hour12: false,
+  }).format(date));
+
+  const stockholmWeekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Stockholm",
+    weekday: "short",
+  }).format(date);
+  const isWeekend = stockholmWeekday === "Sat" || stockholmWeekday === "Sun";
 
   if (isWeekend) {
-    return hour >= 8 && hour < 18; // 8 AM to 6 PM
+    return stockholmHour >= 8 && stockholmHour < 18; // 8 AM to 6 PM
   } else {
-    return hour >= 16 && hour < 21; // 4 PM to 9 PM
+    return stockholmHour >= 16 && stockholmHour < 21; // 4 PM to 9 PM
   }
 }
 

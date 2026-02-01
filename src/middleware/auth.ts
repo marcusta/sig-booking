@@ -1,9 +1,11 @@
 import fs from "fs/promises";
 import jwt from "jsonwebtoken";
 import path from "path";
-import { hashPassword } from "../utils/hash";
+import { verifyPassword } from "../utils/hash";
+import logger from "../logger";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"; // Should be set via environment variable
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error("JWT_SECRET environment variable is required");
 
 interface User {
   username: string;
@@ -21,7 +23,7 @@ async function loadUsers(): Promise<UsersFile> {
     const fileContent = await fs.readFile(filePath, "utf-8");
     return JSON.parse(fileContent) as UsersFile;
   } catch (error) {
-    console.error("Error loading users file:", error);
+    logger.error("Error loading users file:", { error });
     return { users: [] };
   }
 }
@@ -54,31 +56,9 @@ export async function validateCredentials(
   password: string
 ): Promise<boolean> {
   const { users } = await loadUsers();
-  console.log("validating credentials for", username);
+  logger.debug("Validating credentials", { username });
   const user = users.find((u) => u.username === username);
-  console.log("user", user);
   if (!user) return false;
 
-  const hashedPassword = await hashPassword(password);
-  console.log("hashedPassword", hashedPassword);
-  console.log("user.passwordHash", user.passwordHash);
-  return user.passwordHash === hashedPassword;
+  return await verifyPassword(password, user.passwordHash);
 }
-
-// Optional: If you need the decoded token data
-export async function decodeToken(
-  token: string
-): Promise<{ username: string } | null> {
-  return new Promise((resolve) => {
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
-      if (err) resolve(null);
-      else resolve(decoded as { username: string });
-    });
-  });
-}
-
-// Types for JWT handlers
-export type JWTHandler = {
-  sign: (payload: any) => Promise<string>;
-  verify: (token: string) => Promise<any>;
-};

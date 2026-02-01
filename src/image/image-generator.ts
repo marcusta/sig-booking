@@ -1,6 +1,15 @@
 import path from "path";
 import sharp from "sharp";
 
+function escapeXmlText(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 export async function addTextToImage(
   normalText: string,
   boldText: string
@@ -11,24 +20,24 @@ export async function addTextToImage(
   );
   const svgText = `
     <svg width="700" height="400">
-      <text 
-        x="350" 
-        y="85" 
-        text-anchor="middle" 
-        font-family="HP Simplified" 
+      <text
+        x="350"
+        y="85"
+        text-anchor="middle"
+        font-family="HP Simplified"
         font-weight="bold"
-        font-size="23" 
+        font-size="23"
         fill="#000"
-      >${boldText}</text>
-      <text 
-        x="350" 
-        y="150" 
-        text-anchor="middle" 
-        font-family="HP Simplified" 
+      >${escapeXmlText(boldText)}</text>
+      <text
+        x="350"
+        y="150"
+        text-anchor="middle"
+        font-family="HP Simplified"
         font-weight="normal"
-        font-size="17" 
+        font-size="17"
         fill="#000"
-      >${normalText}</text>
+      >${escapeXmlText(normalText)}</text>
     </svg>
   `;
 

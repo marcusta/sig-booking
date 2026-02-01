@@ -1,31 +1,11 @@
-import crypto from "crypto";
-import fs from "fs/promises";
-import path from "path";
-
-interface UsersFile {
-  salt: string;
-  users: Array<{
-    username: string;
-    passwordHash: string;
-  }>;
-}
-
-async function getSalt(): Promise<string> {
-  try {
-    const filePath = path.join(process.cwd(), "data", "users.json");
-    const fileContent = await fs.readFile(filePath, "utf-8");
-    const usersFile = JSON.parse(fileContent) as UsersFile;
-    return usersFile.salt;
-  } catch (error) {
-    console.error("Error reading salt from users file:", error);
-    throw new Error("Could not read salt from users file");
-  }
-}
+// NOTE: This uses bcrypt via Bun's built-in password API.
+// Existing users.json entries with SHA256 hashes will need to be regenerated
+// using generate-password-hash.ts and manually updated in users.json.
 
 export async function hashPassword(password: string): Promise<string> {
-  const salt = await getSalt();
-  return crypto
-    .createHash("sha256")
-    .update(salt + password)
-    .digest("hex");
+  return await Bun.password.hash(password);
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return await Bun.password.verify(password, hash);
 }

@@ -90,6 +90,12 @@ src/
 
 - Do NOT add "Co-Authored-By" lines to commit messages
 
+## Production
+
+- **Host:** `marcus@app.swedenindoorgolf.se`
+- **Deploy path:** `/srv/sig-booking/`
+- **Download prod DB:** `scp marcus@app.swedenindoorgolf.se:/srv/sig-booking/data/matchi.db ./data/matchi-prod.db`
+
 ## Testing
 
 No automated tests currently exist.

@@ -37,7 +37,6 @@ export async function showUserMessageForCourt(
     );
   } catch (error) {
     logger.error("Error showing user message: ", error);
-    console.log("Error showing user message: ", error);
     return null;
   }
 
@@ -136,8 +135,8 @@ async function getActiveBookingsForCourt(
       .where(
         and(
           eq(bookings.courtId, courtId),
-          sql`datetime(${bookings.startTime}) >= datetime(${startTime})`,
-          sql`datetime(${bookings.endTime}) <= datetime(${endTime})`,
+          sql`datetime(${bookings.startTime}) < datetime(${endTime})`,
+          sql`datetime(${bookings.endTime}) > datetime(${startTime})`,
           eq(bookings.cancelled, false)
         )
       )
@@ -150,7 +149,7 @@ async function getActiveBookingsForCourt(
     const rows = await query.all();
     return rows;
   } catch (e: any) {
-    console.log("dbBookings.ts getActiveBookingsForCourt() error: ", e);
+    logger.error("dbBookings.ts getActiveBookingsForCourt() error: ", e);
     throw e;
   }
 }

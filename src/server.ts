@@ -1,9 +1,10 @@
 import { Elysia } from "elysia";
 import routes from "routes";
+import logger from "logger";
 
 const app = new Elysia().use(routes);
 
 const port = 3001;
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+  logger.info(`Server is running on http://localhost:${port}`);
 });
