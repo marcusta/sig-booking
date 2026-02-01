@@ -86,6 +86,10 @@ src/
 - `JWT_SECRET` - Set in production (has weak default)
 - No `.env` file; config is hardcoded or in data files
 
+## Git Commits
+
+- Do NOT add "Co-Authored-By" lines to commit messages
+
 ## Testing
 
 No automated tests currently exist.
