@@ -1,4 +1,10 @@
-import { customType, index, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  customType,
+  index,
+  integer,
+  sqliteTable,
+  text,
+} from "drizzle-orm/sqlite-core";
 import type { MatchiPlayer, MatchiWebhookJson } from "matchi_types";
 
 // Custom type for boolean fields stored as integers
@@ -56,3 +62,24 @@ export const bookingEvents = sqliteTable("booking_events", {
 
 export type BookingEvent = typeof bookingEvents.$inferSelect;
 export type NewBookingEvent = typeof bookingEvents.$inferInsert;
+
+export const courseSuggestions = sqliteTable(
+  "course_suggestions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    customerId: text("customerId").notNull(),
+    level: text("level").notNull(),
+    course: text("course").notNull(),
+    suggestedAt: text("suggestedAt").notNull(),
+  },
+  (table) => ({
+    customerLevelCourseIdx: index("course_suggestion_idx").on(
+      table.customerId,
+      table.level,
+      table.course
+    ),
+  })
+);
+
+export type CourseSuggestion = typeof courseSuggestions.$inferSelect;
+export type NewCourseSuggestion = typeof courseSuggestions.$inferInsert;

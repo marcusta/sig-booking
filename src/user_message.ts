@@ -8,6 +8,7 @@ export interface UserMessage {
   type: "start" | "end-free" | "end-occupied";
   firstName: string;
   lastName: string;
+  booking: Booking;
 }
 
 async function setHasShownStartMessage(bookingId: string) {
@@ -63,6 +64,7 @@ export async function showUserMessageForCourt(
       type: "start",
       firstName: currentBooking.firstName,
       lastName: currentBooking.lastName,
+      booking: currentBooking,
     };
   }
 
@@ -77,6 +79,7 @@ export async function showUserMessageForCourt(
       type: "start",
       firstName: nextBooking.firstName,
       lastName: nextBooking.lastName,
+      booking: nextBooking,
     };
   }
 
@@ -92,6 +95,7 @@ export async function showUserMessageForCourt(
         type: "end-free",
         firstName: currentBooking.firstName,
         lastName: currentBooking.lastName,
+        booking: currentBooking,
       };
     } else {
       await setHasShownEndMessage(currentBooking.bookingId);
@@ -102,6 +106,7 @@ export async function showUserMessageForCourt(
           type: "end-occupied",
           firstName: currentBooking.firstName,
           lastName: currentBooking.lastName,
+          booking: currentBooking,
         };
       }
     }

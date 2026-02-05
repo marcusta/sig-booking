@@ -2,6 +2,10 @@ import { Elysia } from "elysia";
 import { readFileSync } from "fs";
 import type { MatchiWebhookJson } from "matchi_types";
 import { getMonthlyBookingSummary } from "services/booking_analysis";
+import {
+  getCourseSuggestionForCustomer,
+  getSkillLevelForCustomer,
+} from "services/course_suggestions";
 import { generateBookingSummaryHTML } from "services/html_generator";
 import { showUserMessageForCourt } from "user_message";
 import { handleWebhook } from "webhook_handlers";
@@ -60,6 +64,16 @@ const routes = new Elysia()
         return;
       }
       return handleShowImage(matchiCourtId, set);
+    }
+  )
+  .get(
+    "/matchi-courts/:matchiCourtId/show-message",
+    async ({ params: { matchiCourtId }, set }) => {
+      if (!isValidMatchiCourtId(matchiCourtId)) {
+        set.status = 404;
+        return;
+      }
+      return handleShowMessage(matchiCourtId, set);
     }
   )
 
@@ -190,12 +204,7 @@ async function handleShowImage(courtId: string, set: any) {
     const userMessage = await showUserMessageForCourt(courtId);
     if (userMessage) {
       const { type, firstName: rawFirstName, lastName } = userMessage;
-      const firstName =
-        rawFirstName === "Ambassadör"
-          ? "Amb " + lastName.split(" ")[0]
-          : rawFirstName.startsWith("Ambassadör ")
-            ? "Amb " + rawFirstName.slice("Ambassadör ".length)
-            : rawFirstName;
+      const firstName = normalizeFirstName(rawFirstName, lastName);
       let imageBuffer;
       if (type === "start") {
         imageBuffer = await getStartImage(firstName);
@@ -213,6 +222,82 @@ async function handleShowImage(courtId: string, set: any) {
     logger.error("Error generating image: " + JSON.stringify({ error }));
     set.status = 500;
   }
+}
+
+async function handleShowMessage(courtId: string, set: any) {
+  try {
+    const userMessage = await showUserMessageForCourt(courtId);
+    if (!userMessage) {
+      set.status = 404;
+      return;
+    }
+
+    const { type, firstName: rawFirstName, lastName, booking } = userMessage;
+    const customerName = normalizeFirstName(rawFirstName, lastName);
+    const skillLevel = await getSkillLevelForCustomer(booking.customerId);
+    const courseSuggestion = await getCourseSuggestionForCustomer(
+      booking.customerId,
+      skillLevel
+    );
+
+    return {
+      type: mapMessageType(type),
+      customerName,
+      startTime: formatTimeHHmm(new Date(booking.startTime)),
+      endTime: formatTimeHHmm(new Date(booking.endTime)),
+      level: skillLevel,
+      courseSuggestion,
+      bookingUrl: buildBookingUrl(new Date(booking.startTime)),
+    };
+  } catch (error) {
+    logger.error("Error generating message: " + JSON.stringify({ error }));
+    set.status = 500;
+  }
+}
+
+function normalizeFirstName(rawFirstName: string, lastName: string): string {
+  if (rawFirstName === "Ambassadör") {
+    return "Amb " + lastName.split(" ")[0];
+  }
+  if (rawFirstName.startsWith("Ambassadör ")) {
+    return "Amb " + rawFirstName.slice("Ambassadör ".length);
+  }
+  return rawFirstName;
+}
+
+function mapMessageType(
+  type: "start" | "end-free" | "end-occupied"
+): "welcome" | "ending-free" | "ending-booked" {
+  if (type === "start") {
+    return "welcome";
+  }
+  if (type === "end-free") {
+    return "ending-free";
+  }
+  return "ending-booked";
+}
+
+function formatTimeHHmm(date: Date): string {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Stockholm",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function formatDateYYYYMMDD(date: Date): string {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Stockholm",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function buildBookingUrl(date: Date): string {
+  const bookingDate = formatDateYYYYMMDD(date);
+  return `https://www.matchi.se/facilities/swedenindoorgolf?date=${bookingDate}&sport=`;
 }
 
 async function getStartImage(firstName: string) {
