@@ -4,7 +4,7 @@ import logger from "logger";
 
 const app = new Elysia().use(routes);
 
-const port = 3001;
+const port = Number(process.env.PORT ?? 3001);
 app.listen(port, () => {
   logger.info(`Server is running on http://localhost:${port}`);
 });

@@ -22,7 +22,7 @@ Webhook-based booking management system for SIG. Integrates with the Matchi book
 - `bun run --watch src/server.ts` - Dev server with hot reload
 - `bun run src/server.ts` - Production server
 - `bun run src/db/migrate.ts` - Run database migrations
-- `bunx drizzle-kit generate` - Generate new migration files
+- `bun run db:generate` - Generate new migration files (required when schema changes)
 - `bunx drizzle-kit studio` - Visual database browser
 - `bun run src/scripts/generate-password-hash.ts` - Generate password hash for new users
 

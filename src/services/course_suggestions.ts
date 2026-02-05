@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../db/db";
 import { bookings, courseSuggestions } from "../db/schema";
 
@@ -47,11 +47,13 @@ export async function getSkillLevelForCustomer(
   customerId: string
 ): Promise<SkillLevel> {
   const result = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ bookingId: bookings.bookingId })
     .from(bookings)
-    .where(and(eq(bookings.customerId, customerId), eq(bookings.cancelled, false)));
+    .where(
+      and(eq(bookings.customerId, customerId), eq(bookings.cancelled, false))
+    );
 
-  const totalBookings = Number(result[0]?.count ?? 0);
+  const totalBookings = result.length;
 
   if (totalBookings <= 8) {
     return "beginner";
