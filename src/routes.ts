@@ -68,12 +68,13 @@ const routes = new Elysia()
   )
   .get(
     "/matchi-courts/:matchiCourtId/show-message",
-    async ({ params: { matchiCourtId }, set }) => {
+    async ({ params: { matchiCourtId }, query, set }) => {
       if (!isValidMatchiCourtId(matchiCourtId)) {
         set.status = 404;
         return;
       }
-      return handleShowMessage(matchiCourtId, set);
+      const forceCurrent = isTruthyQueryParam(query?.debug);
+      return handleShowMessage(matchiCourtId, set, { forceCurrent });
     }
   )
 
@@ -224,9 +225,13 @@ async function handleShowImage(courtId: string, set: any) {
   }
 }
 
-async function handleShowMessage(courtId: string, set: any) {
+async function handleShowMessage(
+  courtId: string,
+  set: any,
+  options: { forceCurrent?: boolean } = {}
+) {
   try {
-    const userMessage = await showUserMessageForCourt(courtId);
+    const userMessage = await showUserMessageForCourt(courtId, options);
     if (!userMessage) {
       set.status = 404;
       return;
@@ -263,6 +268,14 @@ function normalizeFirstName(rawFirstName: string, lastName: string): string {
     return "Amb " + rawFirstName.slice("Ambassadör ".length);
   }
   return rawFirstName;
+}
+
+function isTruthyQueryParam(value: unknown): boolean {
+  if (value == null) {
+    return false;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes";
 }
 
 function mapMessageType(

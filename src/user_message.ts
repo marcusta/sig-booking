@@ -26,7 +26,8 @@ async function setHasShownEndMessage(bookingId: string) {
 }
 
 export async function showUserMessageForCourt(
-  courtId: string
+  courtId: string,
+  options: { forceCurrent?: boolean } = {}
 ): Promise<UserMessage | null> {
   let currentBooking: Booking | null = null;
   let nextBooking: Booking | null = null;
@@ -40,6 +41,19 @@ export async function showUserMessageForCourt(
   } catch (error) {
     logger.error("Error showing user message: ", error);
     return null;
+  }
+
+  if (options.forceCurrent) {
+    if (!currentBooking) {
+      logger.info("showUserMessageForCourt: No current booking for court");
+      return null;
+    }
+    return {
+      type: "start",
+      firstName: currentBooking.firstName,
+      lastName: currentBooking.lastName,
+      booking: currentBooking,
+    };
   }
 
   const { isJustBefore } = isNearNewHour();
