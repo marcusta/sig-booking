@@ -43,6 +43,7 @@ export const bookings = sqliteTable("bookings", {
   hasShownEndMessage: booleanAsInteger("hasShownEndMessage")
     .notNull()
     .default(false),
+  isTest: booleanAsInteger("isTest").notNull().default(false),
 }, (table) => ({
   bookingQueryIdx: index("booking_query_idx").on(table.courtId, table.startTime, table.endTime, table.cancelled),
 }));

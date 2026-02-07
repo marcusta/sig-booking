@@ -37,17 +37,4 @@ function getExactHourFromNow(offset: number = 0): Date {
   return result;
 }
 
-// getMinutes() is timezone-safe since minutes are invariant across timezones.
-export function isNearNewHour(
-  beforeMinutes: number = 5,
-  afterMinutes: number = 10
-): { isJustBefore: boolean; isJustAfter: boolean } {
-  const now = new Date();
-  const minutes = now.getMinutes();
-  const isJustBefore = minutes >= 60 - beforeMinutes;
-  const isJustAfter = minutes < afterMinutes;
-
-  return { isJustBefore, isJustAfter };
-}
-
 export { getExactHourFromNow };

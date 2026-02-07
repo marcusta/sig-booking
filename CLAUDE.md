@@ -98,4 +98,7 @@ src/
 
 ## Testing
 
-No automated tests currently exist.
+- `bun test` - Run all tests
+- `bun test src/tests/user-message/` - Run a specific test directory
+- Avoid mocking. Prefer real instances (in-memory SQLite, pure function inputs) over mocks/stubs. Structure code so the interesting logic is in pure functions that are trivially testable without mocking.
+- Test files live in `src/tests/` mirroring the source structure.

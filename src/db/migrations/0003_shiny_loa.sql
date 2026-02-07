@@ -1,0 +1,1 @@
+ALTER TABLE `bookings` ADD `isTest` integer DEFAULT false NOT NULL;

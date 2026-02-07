@@ -1,3 +1,4 @@
+import { eq, and } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { readFileSync } from "fs";
 import type { MatchiWebhookJson } from "matchi_types";
@@ -10,6 +11,8 @@ import { generateBookingSummaryHTML } from "services/html_generator";
 import { showUserMessageForCourt } from "user_message";
 import { handleWebhook } from "webhook_handlers";
 import { BAY_TO_COURT, VALID_MATCHI_COURT_IDS } from "./courts";
+import { db } from "./db/db";
+import { bookings } from "./db/schema";
 import { addTextToImage } from "./image/image-generator";
 import logger from "./logger";
 
@@ -26,6 +29,104 @@ const routes = new Elysia()
   .get("/", () => ({
     message: "Welcome to the SIG Matchi webhook server!",
   }))
+
+  // Test endpoints for booking manipulation
+  .post(
+    "/test/courts/:matchiCourtId/bookings",
+    async ({ params: { matchiCourtId }, body, set }) => {
+      if (!isValidMatchiCourtId(matchiCourtId)) {
+        set.status = 404;
+        return { error: "Invalid court ID" };
+      }
+      const b = (body || {}) as Record<string, any>;
+      const now = new Date();
+      const startTime = b.startTime || new Date(now.getTime() + 5 * 60_000).toISOString();
+      const endTime = b.endTime || new Date(new Date(startTime).getTime() + 60 * 60_000).toISOString();
+      const bookingId = `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+      const newBooking = {
+        bookingId,
+        courtId: matchiCourtId,
+        courtName: `Test Bay`,
+        startTime,
+        endTime,
+        splitPayment: false,
+        customerId: `test-customer-${Date.now()}`,
+        email: "test@test.com",
+        userId: "test-user",
+        firstName: b.firstName || "Test",
+        lastName: b.lastName || "Testsson",
+        issuerId: "test-issuer",
+        players: [],
+        cancelled: false,
+        hasShownStartMessage: b.hasShownStartMessage ?? false,
+        hasShownEndMessage: b.hasShownEndMessage ?? false,
+        isTest: true,
+      };
+
+      await db.insert(bookings).values(newBooking);
+      set.status = 201;
+      return newBooking;
+    }
+  )
+
+  .get(
+    "/test/courts/:matchiCourtId/bookings",
+    async ({ params: { matchiCourtId }, set }) => {
+      if (!isValidMatchiCourtId(matchiCourtId)) {
+        set.status = 404;
+        return { error: "Invalid court ID" };
+      }
+      const results = await db
+        .select()
+        .from(bookings)
+        .where(and(eq(bookings.courtId, matchiCourtId), eq(bookings.isTest, true)));
+      return results;
+    }
+  )
+
+  .delete(
+    "/test/courts/:matchiCourtId/bookings",
+    async ({ params: { matchiCourtId }, set }) => {
+      if (!isValidMatchiCourtId(matchiCourtId)) {
+        set.status = 404;
+        return { error: "Invalid court ID" };
+      }
+      const result = await db
+        .delete(bookings)
+        .where(and(eq(bookings.courtId, matchiCourtId), eq(bookings.isTest, true)));
+      return { deleted: result.changes };
+    }
+  )
+
+  .patch(
+    "/test/bookings/:bookingId",
+    async ({ params: { bookingId }, body, set }) => {
+      const existing = await db
+        .select()
+        .from(bookings)
+        .where(and(eq(bookings.bookingId, bookingId), eq(bookings.isTest, true)));
+      if (existing.length === 0) {
+        set.status = 404;
+        return { error: "Test booking not found" };
+      }
+      const b = (body || {}) as Record<string, any>;
+      const updates: Record<string, any> = {};
+      if (b.firstName !== undefined) updates.firstName = b.firstName;
+      if (b.lastName !== undefined) updates.lastName = b.lastName;
+      if (b.startTime !== undefined) updates.startTime = b.startTime;
+      if (b.endTime !== undefined) updates.endTime = b.endTime;
+      if (b.hasShownStartMessage !== undefined) updates.hasShownStartMessage = b.hasShownStartMessage;
+      if (b.hasShownEndMessage !== undefined) updates.hasShownEndMessage = b.hasShownEndMessage;
+      if (b.cancelled !== undefined) updates.cancelled = b.cancelled;
+
+      if (Object.keys(updates).length > 0) {
+        await db.update(bookings).set(updates).where(eq(bookings.bookingId, bookingId));
+      }
+      const updated = await db.select().from(bookings).where(eq(bookings.bookingId, bookingId));
+      return updated[0];
+    }
+  )
 
   .get("*", ({ set }) => {
     set.status = 404;
